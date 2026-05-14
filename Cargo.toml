@@ -1,0 +1,17 @@
+[package]
+name = "gitree"
+version = "0.1.0"
+edition = "2024"
+description = "Tree view of git repositories under a directory, with current branch and short commit hash."
+license = "MIT"
+repository = "https://github.com/rtzr/gitree"
+readme = "README.md"
+keywords = ["git", "cli", "tree", "repositories"]
+categories = ["command-line-utilities"]
+
+[dependencies]
+
+[profile.release]
+strip = true
+lto = "thin"
+codegen-units = 1
