@@ -1,4 +1,6 @@
 use std::io::IsTerminal;
+use std::path::Path;
+use std::time::Duration;
 
 use owo_colors::OwoColorize;
 use unicode_width::UnicodeWidthStr;
@@ -29,6 +31,10 @@ impl Theme {
         if self.emoji { "📦" } else { "[G]" }
     }
 
+    fn header_icon(self) -> &'static str {
+        if self.emoji { "🌳" } else { "gitree" }
+    }
+
     fn state_dot(self, state: RepoState) -> &'static str {
         if !self.emoji {
             return match state {
@@ -44,6 +50,88 @@ impl Theme {
             RepoState::Empty => "○",
             RepoState::Unreadable => "✕",
         }
+    }
+}
+
+pub fn count_repos(node: &Node) -> usize {
+    match &node.kind {
+        NodeKind::Repo(_) => 1,
+        NodeKind::Dir(children) => children.iter().map(count_repos).sum(),
+    }
+}
+
+/// Render the rounded header box that appears above the tree.
+pub fn header(root_path: &Path, repos: usize, elapsed: Duration, theme: Theme) -> String {
+    let path_str = pretty_path(root_path);
+    let ms = elapsed.as_millis();
+    let title = if theme.emoji {
+        format!("{} gitree", theme.header_icon())
+    } else {
+        "gitree".to_string()
+    };
+
+    let content = format!(
+        "{title} · {path_str} · {repos} {plural} · scanned in {ms}ms",
+        plural = if repos == 1 { "repo" } else { "repos" },
+    );
+    let content_w = UnicodeWidthStr::width(content.as_str());
+
+    // Pad to terminal width if available, otherwise just content width + breathing room.
+    let term_w = terminal_size::terminal_size()
+        .map(|(w, _)| w.0 as usize)
+        .unwrap_or(0);
+    let inner = if term_w >= content_w + 4 {
+        (term_w - 2).min(content_w + 4)
+    } else {
+        content_w + 4
+    };
+
+    let pad_right = inner.saturating_sub(content_w + 2);
+    let bar = "─".repeat(inner);
+
+    let top = format!("╭{}╮", bar);
+    let mid = format!("│ {} {} │", content, " ".repeat(pad_right));
+    let bot = format!("╰{}╯", bar);
+
+    let mut out = String::new();
+    out.push_str(&paint_header(&top, theme));
+    out.push('\n');
+    out.push_str(&paint_header_line(&mid, theme));
+    out.push('\n');
+    out.push_str(&paint_header(&bot, theme));
+    out.push_str("\n\n");
+    out
+}
+
+fn pretty_path(path: &Path) -> String {
+    let canonical = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
+    if let Ok(home) = std::env::var("HOME") {
+        if let Ok(stripped) = canonical.strip_prefix(&home) {
+            let s = stripped.to_string_lossy();
+            if s.is_empty() {
+                return "~".to_string();
+            }
+            return format!("~/{}", s);
+        }
+    }
+    canonical.display().to_string()
+}
+
+fn paint_header(s: &str, theme: Theme) -> String {
+    if theme.color {
+        s.bright_cyan().to_string()
+    } else {
+        s.to_string()
+    }
+}
+
+fn paint_header_line(s: &str, theme: Theme) -> String {
+    // Border characters stay cyan but the content is bold for readability.
+    // owo-colors doesn't easily mix per-substring, so we approximate: just bright_cyan whole line.
+    if theme.color {
+        s.bright_cyan().bold().to_string()
+    } else {
+        s.to_string()
     }
 }
 

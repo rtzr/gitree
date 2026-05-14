@@ -3,6 +3,7 @@ mod render;
 mod scan;
 
 use std::path::PathBuf;
+use std::time::Instant;
 
 use clap::Parser;
 
@@ -34,8 +35,15 @@ struct Args {
 fn main() {
     let args = Args::parse();
     let theme = render::Theme::resolve(args.no_color, args.no_emoji);
-    match scan::scan(&args.path, args.depth, args.all) {
+
+    let started = Instant::now();
+    let scanned = scan::scan(&args.path, args.depth, args.all);
+    let elapsed = started.elapsed();
+
+    match scanned {
         Some(root) => {
+            let repos = render::count_repos(&root);
+            print!("{}", render::header(&args.path, repos, elapsed, theme));
             print!("{}", render::render(&root, theme));
         }
         None => {
