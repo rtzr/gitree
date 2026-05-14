@@ -1,3 +1,4 @@
+mod git_info;
 mod scan;
 
 use std::path::PathBuf;
@@ -42,7 +43,13 @@ fn main() {
 fn print_debug(node: &Node, depth: usize) {
     let pad = "  ".repeat(depth);
     match &node.kind {
-        NodeKind::Repo(path) => println!("{pad}- [repo] {} ({})", node.name, path.display()),
+        NodeKind::Repo(path) => {
+            let info = git_info::read(path);
+            println!(
+                "{pad}- {} [{} @ {}]",
+                node.name, info.branch, info.short_hash
+            );
+        }
         NodeKind::Dir(children) => {
             println!("{pad}+ {}", node.name);
             for c in children {
