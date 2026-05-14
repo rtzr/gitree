@@ -1,6 +1,10 @@
+mod scan;
+
 use std::path::PathBuf;
 
 use clap::Parser;
+
+use crate::scan::{Node, NodeKind};
 
 /// Tree view of git repositories under a directory.
 #[derive(Debug, Parser)]
@@ -29,5 +33,21 @@ struct Args {
 
 fn main() {
     let args = Args::parse();
-    println!("{args:#?}");
+    match scan::scan(&args.path, args.depth, args.all) {
+        Some(root) => print_debug(&root, 0),
+        None => println!("(no git repositories found under {})", args.path.display()),
+    }
+}
+
+fn print_debug(node: &Node, depth: usize) {
+    let pad = "  ".repeat(depth);
+    match &node.kind {
+        NodeKind::Repo(path) => println!("{pad}- [repo] {} ({})", node.name, path.display()),
+        NodeKind::Dir(children) => {
+            println!("{pad}+ {}", node.name);
+            for c in children {
+                print_debug(c, depth + 1);
+            }
+        }
+    }
 }
