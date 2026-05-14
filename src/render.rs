@@ -1,25 +1,77 @@
+use std::io::IsTerminal;
+
+use owo_colors::OwoColorize;
 use unicode_width::UnicodeWidthStr;
 
-use crate::git_info::{self, RepoInfo};
+use crate::git_info::{self, RepoInfo, RepoState};
 use crate::scan::{Node, NodeKind};
 
-/// Build a printable tree string from a scanned node.
-pub fn render(root: &Node) -> String {
+#[derive(Debug, Clone, Copy)]
+pub struct Theme {
+    pub color: bool,
+    pub emoji: bool,
+}
+
+impl Theme {
+    pub fn resolve(no_color: bool, no_emoji: bool) -> Self {
+        let color = !no_color && std::io::stdout().is_terminal();
+        Self {
+            color,
+            emoji: !no_emoji,
+        }
+    }
+
+    fn dir_icon(self) -> &'static str {
+        if self.emoji { "📂" } else { "[D]" }
+    }
+
+    fn repo_icon(self) -> &'static str {
+        if self.emoji { "📦" } else { "[G]" }
+    }
+
+    fn state_dot(self, state: RepoState) -> &'static str {
+        if !self.emoji {
+            return match state {
+                RepoState::OnBranch => "*",
+                RepoState::Detached => "!",
+                RepoState::Empty => "o",
+                RepoState::Unreadable => "?",
+            };
+        }
+        match state {
+            RepoState::OnBranch => "●",
+            RepoState::Detached => "⚠",
+            RepoState::Empty => "○",
+            RepoState::Unreadable => "✕",
+        }
+    }
+}
+
+/// Build a printable, optionally colored tree.
+pub fn render(root: &Node, theme: Theme) -> String {
     let mut out = String::new();
-    out.push_str(&label(root));
+    let lbl = root_label(root, theme);
+    out.push_str(&lbl);
     out.push('\n');
 
     match &root.kind {
-        NodeKind::Dir(children) => render_children(children, "", &mut out),
+        NodeKind::Dir(children) => render_children(children, "", theme, &mut out),
         NodeKind::Repo(path) => {
             let info = git_info::read(path);
-            out.push_str(&format!("  {} @ {}\n", info.branch, info.short_hash));
+            let dot = theme.state_dot(info.state);
+            out.push_str(&format!(
+                "  {} {}  {}\n",
+                paint_dot(dot, info.state, theme),
+                paint_branch(&info.branch, info.state, theme),
+                paint_hash(&info.short_hash, theme),
+            ));
         }
     }
     out
 }
 
-fn render_children(children: &[Node], prefix: &str, out: &mut String) {
+fn render_children(children: &[Node], prefix: &str, theme: Theme, out: &mut String) {
+    // Read git info for repo children up front so width math and printing share one source.
     let infos: Vec<Option<RepoInfo>> = children
         .iter()
         .map(|c| match &c.kind {
@@ -28,9 +80,10 @@ fn render_children(children: &[Node], prefix: &str, out: &mut String) {
         })
         .collect();
 
+    // Plain (uncolored, undecorated) widths drive padding.
     let name_w = children
         .iter()
-        .map(|c| UnicodeWidthStr::width(label(c).as_str()))
+        .map(|c| UnicodeWidthStr::width(plain_label(c, theme).as_str()))
         .max()
         .unwrap_or(0);
     let branch_w = infos
@@ -43,34 +96,127 @@ fn render_children(children: &[Node], prefix: &str, out: &mut String) {
     let last_idx = children.len().saturating_sub(1);
     for (i, (child, info)) in children.iter().zip(infos.iter()).enumerate() {
         let is_last = i == last_idx;
-        let connector = if is_last { "└─ " } else { "├─ " };
-        let lbl = label(child);
-        let lbl_w = UnicodeWidthStr::width(lbl.as_str());
-        let name_pad = " ".repeat(name_w.saturating_sub(lbl_w));
+        let connector_raw = if is_last { "└─ " } else { "├─ " };
+        let connector = paint_branchline(connector_raw, theme);
+
+        let plain = plain_label(child, theme);
+        let plain_w = UnicodeWidthStr::width(plain.as_str());
+        let name_pad = " ".repeat(name_w.saturating_sub(plain_w));
+
+        let label = colored_label(child, theme);
 
         match (&child.kind, info) {
             (NodeKind::Repo(_), Some(info)) => {
                 let bw = UnicodeWidthStr::width(info.branch.as_str());
                 let branch_pad = " ".repeat(branch_w.saturating_sub(bw));
+                let dot = theme.state_dot(info.state);
                 out.push_str(&format!(
-                    "{prefix}{connector}{lbl}{name_pad}   {}{branch_pad}   {}\n",
-                    info.branch, info.short_hash,
+                    "{prefix}{connector}{label}{name_pad}   {} {}{branch_pad}   {}\n",
+                    paint_dot(dot, info.state, theme),
+                    paint_branch(&info.branch, info.state, theme),
+                    paint_hash(&info.short_hash, theme),
                 ));
             }
             (NodeKind::Dir(grand), _) => {
-                out.push_str(&format!("{prefix}{connector}{lbl}\n"));
-                let next_prefix = format!("{prefix}{}", if is_last { "    " } else { "│   " });
-                render_children(grand, &next_prefix, out);
+                out.push_str(&format!("{prefix}{connector}{label}\n"));
+                let next_raw = if is_last { "    " } else { "│   " };
+                let next_prefix = format!("{prefix}{}", paint_branchline(next_raw, theme));
+                render_children(grand, &next_prefix, theme, out);
             }
-            // Repo with None info: should not happen, but skip defensively.
             (NodeKind::Repo(_), None) => {}
         }
     }
 }
 
-fn label(node: &Node) -> String {
+// --- label helpers -----------------------------------------------------------
+
+fn root_label(node: &Node, theme: Theme) -> String {
     match &node.kind {
-        NodeKind::Dir(_) => format!("{}/", node.name),
-        NodeKind::Repo(_) => node.name.clone(),
+        NodeKind::Dir(_) => paint_dir(&format!("{}/", node.name), theme),
+        NodeKind::Repo(_) => format!(
+            "{} {}",
+            theme.repo_icon(),
+            paint_repo(&node.name, theme),
+        ),
+    }
+}
+
+fn colored_label(node: &Node, theme: Theme) -> String {
+    match &node.kind {
+        NodeKind::Dir(_) => format!(
+            "{} {}",
+            theme.dir_icon(),
+            paint_dir(&format!("{}/", node.name), theme),
+        ),
+        NodeKind::Repo(_) => format!(
+            "{} {}",
+            theme.repo_icon(),
+            paint_repo(&node.name, theme),
+        ),
+    }
+}
+
+fn plain_label(node: &Node, theme: Theme) -> String {
+    match &node.kind {
+        NodeKind::Dir(_) => format!("{} {}/", theme.dir_icon(), node.name),
+        NodeKind::Repo(_) => format!("{} {}", theme.repo_icon(), node.name),
+    }
+}
+
+// --- color helpers -----------------------------------------------------------
+
+fn paint_dir(s: &str, theme: Theme) -> String {
+    if theme.color {
+        s.bright_cyan().bold().to_string()
+    } else {
+        s.to_string()
+    }
+}
+
+fn paint_repo(s: &str, theme: Theme) -> String {
+    if theme.color {
+        s.bold().to_string()
+    } else {
+        s.to_string()
+    }
+}
+
+fn paint_branch(s: &str, state: RepoState, theme: Theme) -> String {
+    if !theme.color {
+        return s.to_string();
+    }
+    match state {
+        RepoState::OnBranch => s.green().to_string(),
+        RepoState::Detached => s.red().to_string(),
+        RepoState::Empty => s.yellow().dimmed().to_string(),
+        RepoState::Unreadable => s.bright_black().to_string(),
+    }
+}
+
+fn paint_dot(s: &str, state: RepoState, theme: Theme) -> String {
+    if !theme.color {
+        return s.to_string();
+    }
+    match state {
+        RepoState::OnBranch => s.green().to_string(),
+        RepoState::Detached => s.red().bold().to_string(),
+        RepoState::Empty => s.yellow().to_string(),
+        RepoState::Unreadable => s.bright_black().to_string(),
+    }
+}
+
+fn paint_hash(s: &str, theme: Theme) -> String {
+    if theme.color {
+        s.yellow().dimmed().to_string()
+    } else {
+        s.to_string()
+    }
+}
+
+fn paint_branchline(s: &str, theme: Theme) -> String {
+    if theme.color {
+        s.bright_black().to_string()
+    } else {
+        s.to_string()
     }
 }

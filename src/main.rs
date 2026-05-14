@@ -33,9 +33,10 @@ struct Args {
 
 fn main() {
     let args = Args::parse();
+    let theme = render::Theme::resolve(args.no_color, args.no_emoji);
     match scan::scan(&args.path, args.depth, args.all) {
         Some(root) => {
-            print!("{}", render::render(&root));
+            print!("{}", render::render(&root, theme));
         }
         None => {
             println!("(no git repositories found under {})", args.path.display());
