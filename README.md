@@ -14,8 +14,15 @@
 </p>
 
 <p align="center">
-  <a href="#english">English</a> · <a href="#한국어">한국어</a>
+  <a href="#english">English</a> · <a href="#한국어">한국어</a> · <a href="#ai-install-prompt">AI install prompt</a>
 </p>
+
+<p align="center">
+  <img src="docs/demo.svg" alt="gitree CLI demo" width="640"/>
+</p>
+
+<details>
+<summary>Static example output</summary>
 
 ```text
 ╭─────────────────────────────────────────────────────────╮
@@ -39,6 +46,62 @@ personal/
 └─ 🤖 gwansang-android
      └─ master · 48ad8de
 ```
+
+</details>
+
+---
+
+<a id="ai-install-prompt"></a>
+
+## AI install prompt
+
+Copy the prompt below into Claude Code / Cursor / Codex / any coding agent —
+it will pick the right release artifact for your machine, install it to your
+`PATH`, and verify the install.
+
+아래 프롬프트를 Claude Code / Cursor / Codex 등 AI 코딩 비서에 그대로 붙여
+넣으면, 머신에 맞는 릴리스 아티팩트를 골라 `PATH` 에 설치하고 동작까지
+확인합니다.
+
+````text
+Please install the `gitree` CLI on this machine. Repo: https://github.com/rtzr/gitree
+
+Steps you should follow, in order:
+
+1. Detect the host:
+   - Run `uname -sm` to get OS and arch.
+   - Map to one of these release targets (the archive lives at
+     `https://github.com/rtzr/gitree/releases/latest/download/gitree-<TAG>-<TARGET>.<EXT>`,
+     where TAG is the latest release tag you discover via the GitHub API):
+       Darwin arm64  → aarch64-apple-darwin       (.tar.gz)
+       Darwin x86_64 → x86_64-apple-darwin        (.tar.gz)
+       Linux  x86_64 → x86_64-unknown-linux-gnu   (.tar.gz)
+       Linux  aarch64→ aarch64-unknown-linux-gnu  (.tar.gz)
+       Windows x86_64→ x86_64-pc-windows-msvc     (.zip)
+
+2. Look up the latest tag:
+   `curl -sSL https://api.github.com/repos/rtzr/gitree/releases/latest | grep -m1 tag_name`
+   (or `gh release view --repo rtzr/gitree --json tagName` if `gh` is available).
+
+3. Download the matching archive to a temp directory, extract it, and move the
+   `gitree` binary into the first writable directory on the user's `$PATH`.
+   Prefer in this order: `~/.local/bin`, `~/bin`, `/usr/local/bin`
+   (use `sudo` only if necessary and ask the user first).
+   Create the target directory if it doesn't exist and ensure it's on `PATH`
+   (update the user's shell rc file if it isn't).
+
+4. Verify: run `gitree --version` and `gitree .` (from a directory containing
+   at least one git repo) to confirm the binary works.
+
+5. Report back: the version installed, the install path, and the verify output.
+
+Fallback: if Rust + `cargo` are available on the machine and the user prefers a
+source build, you can instead run:
+    cargo install --git https://github.com/rtzr/gitree --locked
+
+Do NOT proceed past step 1 if `uname` reports a target this script doesn't
+cover — ask the user how they'd like to proceed.
+````
 
 ---
 
