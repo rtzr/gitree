@@ -17,6 +17,9 @@ rayon = "1.10"
 terminal_size = "0.4.4"
 unicode-width = "0.2.2"
 
+[dev-dependencies]
+tempfile = "3.10"
+
 [profile.release]
 strip = true
 lto = "thin"
