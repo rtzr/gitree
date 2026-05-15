@@ -13,6 +13,7 @@ categories = ["command-line-utilities"]
 clap = { version = "4.6.1", features = ["derive"] }
 git2 = { version = "0.20.4", default-features = false }
 owo-colors = "4.3.0"
+rayon = "1.10"
 terminal_size = "0.4.4"
 unicode-width = "0.2.2"
 

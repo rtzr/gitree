@@ -1,6 +1,8 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use rayon::prelude::*;
+
 const DEFAULT_SKIP: &[&str] = &[
     "node_modules",
     "target",
@@ -30,13 +32,14 @@ pub fn scan(
     root: &Path,
     max_depth: Option<usize>,
     include_all: bool,
-    reporter: &dyn Fn(&Path),
+    reporter: &(dyn Fn(&Path) + Sync),
+    parallel: bool,
 ) -> Option<Node> {
     let name = root
         .file_name()
         .map(|s| s.to_string_lossy().into_owned())
         .unwrap_or_else(|| root.display().to_string());
-    walk(root, &name, 0, max_depth, include_all, reporter)
+    walk(root, &name, 0, max_depth, include_all, reporter, parallel)
 }
 
 fn walk(
@@ -45,7 +48,8 @@ fn walk(
     depth: usize,
     max_depth: Option<usize>,
     include_all: bool,
-    reporter: &dyn Fn(&Path),
+    reporter: &(dyn Fn(&Path) + Sync),
+    parallel: bool,
 ) -> Option<Node> {
     reporter(path);
 
@@ -70,30 +74,33 @@ fn walk(
     let mut entries: Vec<_> = entries.flatten().collect();
     entries.sort_by_key(|e| e.file_name());
 
-    let mut children: Vec<Node> = Vec::new();
-    for entry in entries {
-        let ft = match entry.file_type() {
-            Ok(t) => t,
-            Err(_) => continue,
-        };
+    // par_iter().filter_map().collect() preserves input order, so sibling
+    // sort order is identical to the serial path.
+    let map_entry = |entry: &fs::DirEntry| -> Option<Node> {
+        let ft = entry.file_type().ok()?;
         if ft.is_symlink() || !ft.is_dir() {
-            continue;
+            return None;
         }
         let entry_name = entry.file_name().to_string_lossy().into_owned();
         if should_skip(&entry_name, include_all) {
-            continue;
+            return None;
         }
-        if let Some(child) = walk(
+        walk(
             &entry.path(),
             &entry_name,
             depth + 1,
             max_depth,
             include_all,
             reporter,
-        ) {
-            children.push(child);
-        }
-    }
+            parallel,
+        )
+    };
+
+    let children: Vec<Node> = if parallel {
+        entries.par_iter().filter_map(map_entry).collect()
+    } else {
+        entries.iter().filter_map(map_entry).collect()
+    };
 
     if children.is_empty() {
         return None;

@@ -32,11 +32,29 @@ struct Args {
     /// Use ASCII markers instead of emoji.
     #[arg(long)]
     no_emoji: bool,
+
+    /// Number of threads for the parallel directory scan. `0` means auto
+    /// (= number of CPU cores). Default is auto, except on Linux when a
+    /// rotational disk (HDD) is detected — then defaults to 1 to avoid
+    /// head thrashing.
+    #[arg(short = 'j', long = "jobs")]
+    jobs: Option<usize>,
 }
 
 fn main() {
     let args = Args::parse();
     let theme = render::Theme::resolve(args.no_color, args.no_emoji);
+
+    // Decide parallelism before starting any FS work. `threads = 1` ⇒ serial
+    // path (no rayon overhead). `> 1` ⇒ resize the global pool. `0` ⇒ leave
+    // rayon's default pool size (= num_cpus) untouched.
+    let threads = pick_thread_count(args.jobs, &args.path);
+    let parallel = threads != 1;
+    if threads > 1 {
+        let _ = rayon::ThreadPoolBuilder::new()
+            .num_threads(threads)
+            .build_global();
+    }
 
     let spinner = progress::Spinner::start(
         format!("Scanning {}…", args.path.display()),
@@ -50,7 +68,7 @@ fn main() {
     };
 
     let started = Instant::now();
-    let scanned = scan::scan(&args.path, args.depth, args.all, &report);
+    let scanned = scan::scan(&args.path, args.depth, args.all, &report, parallel);
     // Git info is read lazily during render; keep the spinner running so the
     // user sees activity until the final output is ready.
     spinner.set_status("Reading git info…".to_string());
@@ -85,4 +103,53 @@ fn display_progress(root: &Path, current: &Path) -> String {
         return rel.display().to_string();
     }
     current.display().to_string()
+}
+
+/// Decide how many threads to use for the scan.
+///
+/// - User-specified `-j N` wins outright (`-j 0` = explicit auto).
+/// - Otherwise: auto (return 0 ⇒ rayon's default = num_cpus), **except** on
+///   Linux when the target lives on a rotational disk — then return 1 to
+///   avoid HDD seek thrashing.
+fn pick_thread_count(user_jobs: Option<usize>, scan_root: &Path) -> usize {
+    if let Some(n) = user_jobs {
+        return n;
+    }
+    #[cfg(target_os = "linux")]
+    {
+        if is_rotational_disk(scan_root).unwrap_or(false) {
+            return 1;
+        }
+    }
+    let _ = scan_root; // suppress unused on non-Linux
+    0
+}
+
+/// Linux-only: does `path` live on a rotational (HDD) block device?
+///
+/// Maps path → st_dev → `/sys/dev/block/M:m` → walks up to find
+/// `queue/rotational` (1 = HDD, 0 = SSD/NVMe). Returns None if anything in
+/// that chain isn't readable — we then treat the disk as non-rotational
+/// (the optimistic default).
+#[cfg(target_os = "linux")]
+fn is_rotational_disk(path: &Path) -> Option<bool> {
+    use std::os::unix::fs::MetadataExt;
+
+    let meta = std::fs::metadata(path).ok()?;
+    let dev = meta.dev();
+    // glibc's gnu_dev_major / gnu_dev_minor bit layout.
+    let major = ((dev >> 8) & 0xfff) | ((dev >> 32) & !0xfff);
+    let minor = (dev & 0xff) | ((dev >> 12) & !0xff);
+
+    let dev_link = format!("/sys/dev/block/{}:{}", major, minor);
+    let mut cur = std::fs::canonicalize(&dev_link).ok()?;
+    loop {
+        let rot = cur.join("queue/rotational");
+        if let Ok(s) = std::fs::read_to_string(&rot) {
+            return Some(s.trim() == "1");
+        }
+        if !cur.pop() {
+            return None;
+        }
+    }
 }
