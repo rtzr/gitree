@@ -26,12 +26,17 @@ pub enum NodeKind {
     Repo(PathBuf),
 }
 
-pub fn scan(root: &Path, max_depth: Option<usize>, include_all: bool) -> Option<Node> {
+pub fn scan(
+    root: &Path,
+    max_depth: Option<usize>,
+    include_all: bool,
+    reporter: &dyn Fn(&Path),
+) -> Option<Node> {
     let name = root
         .file_name()
         .map(|s| s.to_string_lossy().into_owned())
         .unwrap_or_else(|| root.display().to_string());
-    walk(root, &name, 0, max_depth, include_all)
+    walk(root, &name, 0, max_depth, include_all, reporter)
 }
 
 fn walk(
@@ -40,7 +45,10 @@ fn walk(
     depth: usize,
     max_depth: Option<usize>,
     include_all: bool,
+    reporter: &dyn Fn(&Path),
 ) -> Option<Node> {
+    reporter(path);
+
     if is_repo(path) {
         return Some(Node {
             name: name.to_string(),
@@ -81,6 +89,7 @@ fn walk(
             depth + 1,
             max_depth,
             include_all,
+            reporter,
         ) {
             children.push(child);
         }

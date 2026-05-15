@@ -4,7 +4,7 @@ mod progress;
 mod render;
 mod scan;
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::Instant;
 
 use clap::Parser;
@@ -44,10 +44,16 @@ fn main() {
         theme.emoji,
     );
 
+    let root_for_report = args.path.clone();
+    let report = |p: &Path| {
+        spinner.set_status(format!("Scanning {}…", display_progress(&root_for_report, p)));
+    };
+
     let started = Instant::now();
-    let scanned = scan::scan(&args.path, args.depth, args.all);
+    let scanned = scan::scan(&args.path, args.depth, args.all, &report);
     // Git info is read lazily during render; keep the spinner running so the
     // user sees activity until the final output is ready.
+    spinner.set_status("Reading git info…".to_string());
     let rendered = scanned.as_ref().map(|root| render::render(root, theme));
     let elapsed = started.elapsed();
 
@@ -63,4 +69,20 @@ fn main() {
             println!("(no git repositories found under {})", args.path.display());
         }
     }
+}
+
+/// Format a path relative to the scan root for the spinner status line.
+/// If the path is the root itself, show the root's basename; otherwise show
+/// the relative tail so the user sees concrete progress.
+fn display_progress(root: &Path, current: &Path) -> String {
+    if current == root {
+        return root
+            .file_name()
+            .map(|s| s.to_string_lossy().into_owned())
+            .unwrap_or_else(|| root.display().to_string());
+    }
+    if let Ok(rel) = current.strip_prefix(root) {
+        return rel.display().to_string();
+    }
+    current.display().to_string()
 }
