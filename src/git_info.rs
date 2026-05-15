@@ -2,11 +2,14 @@ use std::path::Path;
 
 use git2::Repository;
 
+use crate::platform::{self, Platform};
+
 #[derive(Debug, Clone)]
 pub struct RepoInfo {
     pub branch: String,
     pub short_hash: String,
     pub state: RepoState,
+    pub platform: Platform,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -24,6 +27,8 @@ pub enum RepoState {
 const HASH_LEN: usize = 6;
 
 pub fn read(path: &Path) -> RepoInfo {
+    let platform = platform::detect(path);
+
     let repo = match Repository::open(path) {
         Ok(r) => r,
         Err(_) => {
@@ -31,6 +36,7 @@ pub fn read(path: &Path) -> RepoInfo {
                 branch: "???".into(),
                 short_hash: "??????".into(),
                 state: RepoState::Unreadable,
+                platform,
             };
         }
     };
@@ -43,6 +49,7 @@ pub fn read(path: &Path) -> RepoInfo {
                 branch: "(no commits)".into(),
                 short_hash: "------".into(),
                 state: RepoState::Empty,
+                platform,
             };
         }
     };
@@ -63,12 +70,14 @@ pub fn read(path: &Path) -> RepoInfo {
             branch,
             short_hash,
             state: RepoState::OnBranch,
+            platform,
         }
     } else {
         RepoInfo {
             branch: "(detached)".into(),
             short_hash,
             state: RepoState::Detached,
+            platform,
         }
     }
 }

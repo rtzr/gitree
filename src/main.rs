@@ -1,4 +1,5 @@
 mod git_info;
+mod platform;
 mod progress;
 mod render;
 mod scan;

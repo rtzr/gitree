@@ -19,17 +19,25 @@
 
 ```text
 ╭─────────────────────────────────────────────────────────╮
-│ 🌳 gitree · ~/personal · 26 repos · scanned in 5ms      │
+│ 🌳 gitree · ~/personal · 6 repos · scanned in 5ms       │
 ╰─────────────────────────────────────────────────────────╯
 
 personal/
-├─ 📦 2msi-landing          ● main           b44f84
-├─ 📦 auto-auction          ● main           dde900
-├─ 📦 chocoya-location      ○ (no commits)   ------
+├─ 🦀 gitree
+│    └─ main · 660767b
+├─ 🟢 2msi-landing
+│    └─ main · b44f84a
+├─ 🐳 auto-auction
+│    └─ main · dde900c
+├─ 📦 chocoya-location
+│    └─ ○ (no commits)
 ├─ 📂 work/
-│   ├─ 📦 project-x         ● feature/login  c92840
-│   └─ 📦 project-y         ⚠ (detached)     112233
-└─ 📦 gitree                ● main           88aa14
+│    ├─ ▲  project-x
+│    │    └─ feature/login · c92840f
+│    └─ 🐍 project-y
+│         └─ ⚠ (detached) · 112233a
+└─ 🤖 gwansang-android
+     └─ master · 48ad8de
 ```
 
 ---
@@ -97,10 +105,41 @@ gitree ~/projects --no-color --no-emoji
 
 | Marker | Meaning                          |
 | :----: | -------------------------------- |
-|  `●`   | HEAD is on a named branch        |
 |  `⚠`   | Detached HEAD                    |
 |  `○`   | Repo has no commits yet          |
 |  `✕`   | Repo couldn't be opened or read  |
+
+A repo on a named branch has no marker — the green branch text says it all.
+
+### Platform icons
+
+Each repo gets an icon based on a marker file in its root (no file contents
+are read, just directory entries — so it stays fast).
+
+| Icon | Platform       | Detected by                                                         |
+| :--: | -------------- | ------------------------------------------------------------------- |
+| 🦀   | Rust           | `Cargo.toml`                                                        |
+| 🐹   | Go             | `go.mod`                                                            |
+| 🐍   | Python         | `pyproject.toml` / `requirements.txt` / `setup.py` / `Pipfile`      |
+| ▲    | Next.js        | `next.config.*`                                                     |
+| 💚   | Nuxt           | `nuxt.config.*`                                                     |
+| 🚀   | Astro          | `astro.config.*`                                                    |
+| 🧡   | Svelte         | `svelte.config.*`                                                   |
+| 🦕   | Deno           | `deno.json` / `deno.jsonc`                                          |
+| 🟢   | Node.js        | `package.json` (when no framework above matches)                    |
+| 💎   | Ruby           | `Gemfile`                                                           |
+| 🐘   | PHP            | `composer.json`                                                     |
+| ☕   | Java           | `pom.xml`                                                           |
+| 💧   | Elixir         | `mix.exs`                                                           |
+| 🐦   | Flutter / Dart | `pubspec.yaml`                                                      |
+| 🦅   | Swift          | `Package.swift`                                                     |
+| 🍎   | iOS / Xcode    | `*.xcodeproj` / `*.xcworkspace`                                     |
+| 🤖   | Android        | `build.gradle[.kts]` + `app/`                                       |
+| 🌍   | Terraform      | `*.tf` / `*.hcl`                                                    |
+| 🐳   | Docker         | `Dockerfile` / `docker-compose*`                                    |
+| 🌐   | Static web     | `index.html`                                                        |
+| 🔧   | Makefile       | `Makefile` (when nothing else matched)                              |
+| 📦   | Unknown        | fallback                                                            |
 
 ### How it works
 
@@ -179,10 +218,41 @@ gitree ~/projects --no-color --no-emoji
 
 | 마커 | 의미                                  |
 | :--: | ------------------------------------- |
-| `●`  | HEAD가 명시된 브랜치 위에 있음        |
 | `⚠`  | HEAD가 분리됨 (detached)              |
 | `○`  | 아직 커밋이 없는 리포                 |
 | `✕`  | 리포를 열거나 읽지 못함               |
+
+브랜치 위에 정상적으로 있으면 마커 없음 — 녹색 브랜치 텍스트가 그 역할.
+
+### 플랫폼 아이콘
+
+각 리포는 루트의 마커 파일을 보고 자동으로 아이콘이 붙습니다. 파일 내용을
+읽지 않고 디렉토리 entry 이름만 보기 때문에 빠릅니다.
+
+| 아이콘 | 플랫폼          | 감지 기준                                                            |
+| :----: | --------------- | -------------------------------------------------------------------- |
+| 🦀     | Rust            | `Cargo.toml`                                                         |
+| 🐹     | Go              | `go.mod`                                                             |
+| 🐍     | Python          | `pyproject.toml` / `requirements.txt` / `setup.py` / `Pipfile`       |
+| ▲      | Next.js         | `next.config.*`                                                      |
+| 💚     | Nuxt            | `nuxt.config.*`                                                      |
+| 🚀     | Astro           | `astro.config.*`                                                     |
+| 🧡     | Svelte          | `svelte.config.*`                                                    |
+| 🦕     | Deno            | `deno.json` / `deno.jsonc`                                           |
+| 🟢     | Node.js         | `package.json` (위 프레임워크에 매치 안 될 때)                       |
+| 💎     | Ruby            | `Gemfile`                                                            |
+| 🐘     | PHP             | `composer.json`                                                      |
+| ☕     | Java            | `pom.xml`                                                            |
+| 💧     | Elixir          | `mix.exs`                                                            |
+| 🐦     | Flutter / Dart  | `pubspec.yaml`                                                       |
+| 🦅     | Swift           | `Package.swift`                                                      |
+| 🍎     | iOS / Xcode     | `*.xcodeproj` / `*.xcworkspace`                                      |
+| 🤖     | Android         | `build.gradle[.kts]` + `app/`                                        |
+| 🌍     | Terraform       | `*.tf` / `*.hcl`                                                     |
+| 🐳     | Docker          | `Dockerfile` / `docker-compose*`                                     |
+| 🌐     | 정적 웹         | `index.html`                                                         |
+| 🔧     | Makefile        | `Makefile` (위 어느 것에도 매치 안 될 때)                            |
+| 📦     | Unknown         | fallback                                                             |
 
 ### 동작 원리
 
