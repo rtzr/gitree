@@ -1,4 +1,5 @@
 mod git_info;
+mod progress;
 mod render;
 mod scan;
 
@@ -36,17 +37,28 @@ fn main() {
     let args = Args::parse();
     let theme = render::Theme::resolve(args.no_color, args.no_emoji);
 
+    let spinner = progress::Spinner::start(
+        format!("Scanning {}…", args.path.display()),
+        theme.color,
+        theme.emoji,
+    );
+
     let started = Instant::now();
     let scanned = scan::scan(&args.path, args.depth, args.all);
+    // Git info is read lazily during render; keep the spinner running so the
+    // user sees activity until the final output is ready.
+    let rendered = scanned.as_ref().map(|root| render::render(root, theme));
     let elapsed = started.elapsed();
 
-    match scanned {
-        Some(root) => {
+    spinner.stop();
+
+    match (scanned, rendered) {
+        (Some(root), Some(tree)) => {
             let repos = render::count_repos(&root);
             print!("{}", render::header(&args.path, repos, elapsed, theme));
-            print!("{}", render::render(&root, theme));
+            print!("{}", tree);
         }
-        None => {
+        _ => {
             println!("(no git repositories found under {})", args.path.display());
         }
     }

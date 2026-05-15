@@ -148,7 +148,7 @@ pub fn render(root: &Node, theme: Theme) -> String {
             let info = git_info::read(path);
             let dot = theme.state_dot(info.state);
             out.push_str(&format!(
-                "  {} {}  {}\n",
+                "   {} {}  {}\n",
                 paint_dot(dot, info.state, theme),
                 paint_branch(&info.branch, info.state, theme),
                 paint_hash(&info.short_hash, theme),
@@ -168,12 +168,7 @@ fn render_children(children: &[Node], prefix: &str, theme: Theme, out: &mut Stri
         })
         .collect();
 
-    // Plain (uncolored, undecorated) widths drive padding.
-    let name_w = children
-        .iter()
-        .map(|c| UnicodeWidthStr::width(plain_label(c, theme).as_str()))
-        .max()
-        .unwrap_or(0);
+    // Align branch labels across sibling repos so commit hashes line up.
     let branch_w = infos
         .iter()
         .filter_map(|o| o.as_ref())
@@ -186,20 +181,23 @@ fn render_children(children: &[Node], prefix: &str, theme: Theme, out: &mut Stri
         let is_last = i == last_idx;
         let connector_raw = if is_last { "└─ " } else { "├─ " };
         let connector = paint_branchline(connector_raw, theme);
-
-        let plain = plain_label(child, theme);
-        let plain_w = UnicodeWidthStr::width(plain.as_str());
-        let name_pad = " ".repeat(name_w.saturating_sub(plain_w));
-
         let label = colored_label(child, theme);
 
         match (&child.kind, info) {
             (NodeKind::Repo(_), Some(info)) => {
+                // Line 1: tree connector + icon + name.
+                out.push_str(&format!("{prefix}{connector}{label}\n"));
+
+                // Line 2: status indented under the repo, aligned with the
+                // label's icon position. Use a vertical bar continuation for
+                // non-last siblings so the eye can follow the group.
+                let status_raw = if is_last { "   " } else { "│  " };
+                let status_marker = paint_branchline(status_raw, theme);
                 let bw = UnicodeWidthStr::width(info.branch.as_str());
                 let branch_pad = " ".repeat(branch_w.saturating_sub(bw));
                 let dot = theme.state_dot(info.state);
                 out.push_str(&format!(
-                    "{prefix}{connector}{label}{name_pad}   {} {}{branch_pad}   {}\n",
+                    "{prefix}{status_marker}{} {}{branch_pad}  {}\n",
                     paint_dot(dot, info.state, theme),
                     paint_branch(&info.branch, info.state, theme),
                     paint_hash(&info.short_hash, theme),
@@ -241,13 +239,6 @@ fn colored_label(node: &Node, theme: Theme) -> String {
             theme.repo_icon(),
             paint_repo(&node.name, theme),
         ),
-    }
-}
-
-fn plain_label(node: &Node, theme: Theme) -> String {
-    match &node.kind {
-        NodeKind::Dir(_) => format!("{} {}/", theme.dir_icon(), node.name),
-        NodeKind::Repo(_) => format!("{} {}", theme.repo_icon(), node.name),
     }
 }
 
