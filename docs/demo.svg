@@ -2,10 +2,20 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 500"
      font-family="ui-monospace, 'SF Mono', Menlo, Monaco, 'JetBrains Mono', Consolas, 'Liberation Mono', monospace"
      font-size="14">
+  <!--
+    Timeline (cycle = 7.0s):
+      0.00–0.60s  type "gitree ~/personal"     (0.0% – 8.6%)
+      0.60–0.80s  brief pause                  (8.6% – 11.4%)
+      0.80–1.10s  scan phase (spinner + path)  (11.4% – 15.7%)
+      1.10–1.30s  output snaps in              (15.7% – 18.6%)
+      1.30–6.50s  HOLD the result              (18.6% – 92.9%)   ← the star
+      6.50–7.00s  fade out, restart            (92.9% – 100%)
+  -->
+
   <!-- Terminal background -->
   <rect width="640" height="500" rx="10" fill="#1e1e2e"/>
 
-  <!-- Window title bar -->
+  <!-- Window chrome -->
   <rect width="640" height="36" rx="10" fill="#181825"/>
   <rect y="20" width="640" height="16" fill="#181825"/>
   <circle cx="22" cy="18" r="6" fill="#f38ba8"/>
@@ -14,16 +24,15 @@
   <text x="320" y="22" fill="#6c7086" text-anchor="middle" font-size="11">~/personal — gitree</text>
 
   <!-- ============================================================ -->
-  <!-- Phase 1: prompt + typing animation                            -->
-  <!-- Cycle = 9s. Typing happens 0.0–1.0s (0%–11%).                -->
+  <!-- Prompt line: $ + typed command (clip-path reveals over time)  -->
   <!-- ============================================================ -->
   <defs>
     <clipPath id="typing">
       <rect x="0" y="0" width="0" height="500">
         <animate attributeName="width"
-                 values="0;       0;     200;   200;   200;   0"
-                 keyTimes="0;     0.02;  0.13;  0.94;  0.97;  1"
-                 dur="9s" repeatCount="indefinite"/>
+                 values="0;     0;     200;   200;   200;   0"
+                 keyTimes="0;   0.01;  0.086; 0.92;  0.95;  1"
+                 dur="7s" repeatCount="indefinite"/>
       </rect>
     </clipPath>
   </defs>
@@ -31,137 +40,103 @@
   <text x="22" y="68" fill="#94e2d5">❯</text>
   <text x="40" y="68" fill="#cdd6f4" clip-path="url(#typing)">gitree ~/personal</text>
 
-  <!-- Blinking cursor: hops to end of command once typing completes -->
+  <!-- Blinking cursor that jumps to end of typed text once typing completes -->
   <rect y="55" width="9" height="17" fill="#cdd6f4">
     <animate attributeName="opacity"
-             values="0;1;1;0;0;0;0;0;1;1;0"
-             keyTimes="0;0.005;0.018;0.025;0.13;0.94;0.95;0.96;0.97;0.99;1"
-             dur="9s" repeatCount="indefinite"/>
+             values="0;   1;     1;     0;     0;     0;     1;     0"
+             keyTimes="0; 0.005; 0.012; 0.018; 0.086; 0.92;  0.95;  1"
+             dur="7s" repeatCount="indefinite"/>
     <animate attributeName="x"
-             values="40;40;238;238;40"
-             keyTimes="0;0.02;0.13;0.96;1"
-             dur="9s" repeatCount="indefinite"/>
+             values="40;  40;    238;   238;   40"
+             keyTimes="0; 0.012; 0.086; 0.95;  1"
+             dur="7s" repeatCount="indefinite"/>
   </rect>
 
   <!-- ============================================================ -->
-  <!-- Phase 2: scan spinner + rolling status text                   -->
-  <!-- Active 1.3s–3.7s (14.5%–41%). Inside this:                   -->
-  <!--   1.3–2.0s: "Scanning personal…"                              -->
-  <!--   2.0–2.8s: "Scanning personal/auto-auction…"                 -->
-  <!--   2.8–3.6s: "Reading git info…"                               -->
+  <!-- Scan phase: visible 0.8s – 1.1s only (very brief)             -->
   <!-- ============================================================ -->
   <g opacity="0">
     <animate attributeName="opacity"
-             values="0;0;1;1;0;0"
-             keyTimes="0;0.143;0.155;0.408;0.42;1"
-             dur="9s" repeatCount="indefinite"/>
+             values="0;   0;     1;     1;     0;     0"
+             keyTimes="0; 0.113; 0.118; 0.153; 0.157; 1"
+             dur="7s" repeatCount="indefinite"/>
 
-    <!-- Rotating arc spinner -->
     <g transform="translate(30, 104)">
       <g>
         <circle r="7" fill="none" stroke="#89dceb" stroke-width="2"
                 stroke-dasharray="22 70" stroke-linecap="round"/>
         <animateTransform attributeName="transform" type="rotate"
-                          from="0" to="360" dur="0.9s" repeatCount="indefinite"/>
+                          from="0" to="360" dur="0.7s" repeatCount="indefinite"/>
       </g>
     </g>
-
-    <!-- Status messages: only one visible at a time -->
-    <text x="50" y="108" fill="#9399b2" opacity="0">Scanning personal…
-      <animate attributeName="opacity"
-               values="0;1;1;0;0"
-               keyTimes="0;0.16;0.22;0.225;1"
-               dur="9s" repeatCount="indefinite"/>
-    </text>
-    <text x="50" y="108" fill="#9399b2" opacity="0">Scanning personal/auto-auction…
-      <animate attributeName="opacity"
-               values="0;0;1;1;0;0"
-               keyTimes="0;0.225;0.23;0.31;0.315;1"
-               dur="9s" repeatCount="indefinite"/>
-    </text>
-    <text x="50" y="108" fill="#9399b2" opacity="0">Reading git info…
-      <animate attributeName="opacity"
-               values="0;0;1;1;0;0"
-               keyTimes="0;0.315;0.32;0.40;0.408;1"
-               dur="9s" repeatCount="indefinite"/>
-    </text>
+    <text x="50" y="108" fill="#9399b2">Scanning personal/auto-auction…</text>
   </g>
 
   <!-- ============================================================ -->
-  <!-- Phase 3: output                                              -->
-  <!-- Active 3.8s–8.5s (42%–94.5%).                                -->
+  <!-- OUTPUT — the star. Visible 1.3s – 6.5s (~5.2 seconds).        -->
   <!-- ============================================================ -->
   <g opacity="0">
     <animate attributeName="opacity"
-             values="0;0;1;1;0"
-             keyTimes="0;0.42;0.46;0.95;0.97"
-             dur="9s" repeatCount="indefinite"/>
+             values="0;   0;     1;     1;     0;     0"
+             keyTimes="0; 0.157; 0.186; 0.929; 0.971; 1"
+             dur="7s" repeatCount="indefinite"/>
 
-    <!-- Header box (drawn with rect + text — cleaner than unicode borders) -->
-    <rect x="22" y="86" width="500" height="40" rx="5"
-          stroke="#89dceb" stroke-width="1.2" fill="none"/>
+    <!-- Header pill -->
+    <rect x="22" y="86" width="500" height="40" rx="6"
+          stroke="#89dceb" stroke-width="1.4" fill="#181825"/>
     <text x="38" y="112" fill="#89dceb" font-weight="bold">🌳 gitree</text>
-    <text x="118" y="112" fill="#6c7086">·</text>
-    <text x="132" y="112" fill="#cdd6f4">~/personal</text>
-    <text x="220" y="112" fill="#6c7086">·</text>
-    <text x="232" y="112" fill="#cdd6f4">5 repos</text>
-    <text x="298" y="112" fill="#6c7086">·</text>
-    <text x="310" y="112" fill="#cdd6f4">scanned in 14ms</text>
+    <text x="120" y="112" fill="#6c7086">·</text>
+    <text x="134" y="112" fill="#cdd6f4">~/personal</text>
+    <text x="222" y="112" fill="#6c7086">·</text>
+    <text x="234" y="112" fill="#cdd6f4">5 repos</text>
+    <text x="300" y="112" fill="#6c7086">·</text>
+    <text x="312" y="112" fill="#cdd6f4">scanned in 14ms</text>
 
     <!-- Root label -->
-    <text x="22" y="160" fill="#89dceb" font-weight="bold">personal/</text>
+    <text x="22" y="158" fill="#89dceb" font-weight="bold">personal/</text>
 
-    <!-- Repo 1: gitree (Rust) -->
-    <text x="22" y="190" fill="#6c7086">├─</text>
-    <text x="46" y="190">🦀</text>
-    <text x="76" y="190" fill="#cdd6f4" font-weight="bold">gitree</text>
-    <text x="22" y="212" fill="#6c7086">│    └─</text>
-    <text x="96" y="212" fill="#a6e3a1">main</text>
-    <text x="138" y="212" fill="#6c7086">·</text>
-    <text x="150" y="212" fill="#f9e2af" opacity="0.75">660767b</text>
+    <!-- Repo 1: Rust -->
+    <text x="22" y="188" fill="#6c7086">├─</text>
+    <text x="46" y="188">🦀</text>
+    <text x="76" y="188" fill="#cdd6f4" font-weight="bold">gitree</text>
+    <text x="22" y="210" fill="#6c7086">│    └─</text>
+    <text x="96" y="210" fill="#a6e3a1">main</text>
+    <text x="138" y="210" fill="#6c7086">·</text>
+    <text x="150" y="210" fill="#f9e2af" opacity="0.75">660767b</text>
 
-    <!-- Repo 2: jellos (Node) -->
-    <text x="22" y="242" fill="#6c7086">├─</text>
-    <text x="46" y="242">🟢</text>
-    <text x="76" y="242" fill="#cdd6f4" font-weight="bold">jellos</text>
-    <text x="22" y="264" fill="#6c7086">│    └─</text>
-    <text x="96" y="264" fill="#a6e3a1">main</text>
-    <text x="138" y="264" fill="#6c7086">·</text>
-    <text x="150" y="264" fill="#f9e2af" opacity="0.75">b881d3b</text>
+    <!-- Repo 2: Node -->
+    <text x="22" y="240" fill="#6c7086">├─</text>
+    <text x="46" y="240">🟢</text>
+    <text x="76" y="240" fill="#cdd6f4" font-weight="bold">jellos</text>
+    <text x="22" y="262" fill="#6c7086">│    └─</text>
+    <text x="96" y="262" fill="#a6e3a1">main</text>
+    <text x="138" y="262" fill="#6c7086">·</text>
+    <text x="150" y="262" fill="#f9e2af" opacity="0.75">b881d3b</text>
 
-    <!-- Repo 3: auto-auction (Docker) -->
-    <text x="22" y="294" fill="#6c7086">├─</text>
-    <text x="46" y="294">🐳</text>
-    <text x="76" y="294" fill="#cdd6f4" font-weight="bold">auto-auction</text>
-    <text x="22" y="316" fill="#6c7086">│    └─</text>
-    <text x="96" y="316" fill="#a6e3a1">main</text>
-    <text x="138" y="316" fill="#6c7086">·</text>
-    <text x="150" y="316" fill="#f9e2af" opacity="0.75">dde900c</text>
+    <!-- Repo 3: Docker -->
+    <text x="22" y="292" fill="#6c7086">├─</text>
+    <text x="46" y="292">🐳</text>
+    <text x="76" y="292" fill="#cdd6f4" font-weight="bold">auto-auction</text>
+    <text x="22" y="314" fill="#6c7086">│    └─</text>
+    <text x="96" y="314" fill="#a6e3a1">main</text>
+    <text x="138" y="314" fill="#6c7086">·</text>
+    <text x="150" y="314" fill="#f9e2af" opacity="0.75">dde900c</text>
 
-    <!-- Repo 4: saju (Python) -->
-    <text x="22" y="346" fill="#6c7086">├─</text>
-    <text x="46" y="346">🐍</text>
-    <text x="76" y="346" fill="#cdd6f4" font-weight="bold">saju</text>
-    <text x="22" y="368" fill="#6c7086">│    └─</text>
-    <text x="96" y="368" fill="#a6e3a1">main</text>
-    <text x="138" y="368" fill="#6c7086">·</text>
-    <text x="150" y="368" fill="#f9e2af" opacity="0.75">975968a</text>
+    <!-- Repo 4: Python -->
+    <text x="22" y="344" fill="#6c7086">├─</text>
+    <text x="46" y="344">🐍</text>
+    <text x="76" y="344" fill="#cdd6f4" font-weight="bold">saju</text>
+    <text x="22" y="366" fill="#6c7086">│    └─</text>
+    <text x="96" y="366" fill="#a6e3a1">main</text>
+    <text x="138" y="366" fill="#6c7086">·</text>
+    <text x="150" y="366" fill="#f9e2af" opacity="0.75">975968a</text>
 
-    <!-- Repo 5: chocoya-location (empty) -->
-    <text x="22" y="398" fill="#6c7086">└─</text>
-    <text x="46" y="398">📦</text>
-    <text x="76" y="398" fill="#cdd6f4" font-weight="bold" opacity="0.7">chocoya-location</text>
-    <text x="22" y="420" fill="#6c7086">     └─</text>
-    <text x="96" y="420" fill="#f9e2af">○</text>
-    <text x="110" y="420" fill="#f9e2af" opacity="0.6">(no commits)</text>
-
-    <!-- Trailing prompt cursor -->
-    <text x="22" y="460" fill="#94e2d5">❯</text>
-    <rect x="40" y="447" width="9" height="17" fill="#cdd6f4">
-      <animate attributeName="opacity"
-               values="0;1;1;0;0;1;1;0"
-               keyTimes="0;0.001;0.5;0.501;0.7;0.701;0.95;1"
-               dur="1.2s" repeatCount="indefinite"/>
-    </rect>
+    <!-- Repo 5: Empty -->
+    <text x="22" y="396" fill="#6c7086">└─</text>
+    <text x="46" y="396">📦</text>
+    <text x="76" y="396" fill="#cdd6f4" font-weight="bold" opacity="0.7">chocoya-location</text>
+    <text x="22" y="418" fill="#6c7086">     └─</text>
+    <text x="96" y="418" fill="#f9e2af">○</text>
+    <text x="110" y="418" fill="#f9e2af" opacity="0.6">(no commits)</text>
   </g>
 </svg>
