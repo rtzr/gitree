@@ -16,20 +16,21 @@
 
   <!-- ─── defs at root: clip-paths drive the typing animation ─── -->
   <defs>
-    <!-- Scene A typing: width goes 0 → 70 between 0.5% and 4.2%, holds, then resets -->
+    <!-- Clip rects start at x=40 (the text's x position). That way the clip's
+         right edge is exactly x=40+width, which we can match 1:1 with the
+         cursor's x animation — keeping cursor and reveal-edge in lockstep. -->
     <clipPath id="typeA">
-      <rect x="0" y="0" width="0" height="500">
+      <rect x="40" y="0" width="0" height="500">
         <animate attributeName="width"
-                 values="0;  0;     70;    70;    0;    0"
+                 values="0;  0;     55;    55;    0;    0"
                  keyTimes="0; 0.005; 0.042; 0.333; 0.34; 1"
                  dur="12s" repeatCount="indefinite"/>
       </rect>
     </clipPath>
-    <!-- Scene B typing: width goes 0 → 200 between 36.3% and 41.7%, holds, then resets -->
     <clipPath id="typeB">
-      <rect x="0" y="0" width="0" height="500">
+      <rect x="40" y="0" width="0" height="500">
         <animate attributeName="width"
-                 values="0;  0;     0;     200;   200;   0;    0"
+                 values="0;  0;     0;     150;   150;   0;    0"
                  keyTimes="0; 0.358; 0.363; 0.417; 0.933; 0.94; 1"
                  dur="12s" repeatCount="indefinite"/>
       </rect>
@@ -57,15 +58,17 @@
     <text x="22" y="68" fill="#94e2d5">❯</text>
     <text x="40" y="68" fill="#cdd6f4" clip-path="url(#typeA)">gitree</text>
 
-    <!-- Cursor: blinks during type-in, then jumps to end and parks -->
+    <!-- Cursor: solid visible during typing and right after, hidden once
+         output appears. x glides with the typing reveal so it always sits
+         at the right edge of the most recently typed character. -->
     <rect y="55" width="9" height="17" fill="#cdd6f4">
       <animate attributeName="opacity"
-               values="0;  1;     1;     0;     0;     1;     0;    0"
-               keyTimes="0; 0.005; 0.014; 0.020; 0.042; 0.308; 0.333; 1"
+               values="0;  1;     1;     0;     0;    0"
+               keyTimes="0; 0.005; 0.075; 0.083; 0.34; 1"
                dur="12s" repeatCount="indefinite"/>
       <animate attributeName="x"
-               values="40; 40;    110;   110;   40;   40"
-               keyTimes="0; 0.020; 0.042; 0.333; 0.34; 1"
+               values="40; 40;    95;    95;    40;   40"
+               keyTimes="0; 0.005; 0.042; 0.083; 0.34; 1"
                dur="12s" repeatCount="indefinite"/>
     </rect>
 
@@ -83,7 +86,7 @@
                             from="0" to="360" dur="0.7s" repeatCount="indefinite"/>
         </g>
       </g>
-      <text x="50" y="108" fill="#9399b2">Scanning…</text>
+      <text x="50" y="108" fill="#9399b2">Scanning gitree…</text>
     </g>
 
     <!-- Output: just the gitree repo itself -->
@@ -126,12 +129,12 @@
 
     <rect y="55" width="9" height="17" fill="#cdd6f4">
       <animate attributeName="opacity"
-               values="0;  0;     1;     1;     0;     0;     1;     0;    0"
-               keyTimes="0; 0.363; 0.368; 0.380; 0.388; 0.417; 0.933; 0.96; 1"
+               values="0;  0;     1;     1;     0;     0"
+               keyTimes="0; 0.358; 0.363; 0.455; 0.463; 1"
                dur="12s" repeatCount="indefinite"/>
       <animate attributeName="x"
-               values="40; 40;    238;   238;   40;   40"
-               keyTimes="0; 0.388; 0.417; 0.933; 0.96; 1"
+               values="40; 40;    40;    190;   190;   40;   40"
+               keyTimes="0; 0.358; 0.363; 0.417; 0.463; 0.96; 1"
                dur="12s" repeatCount="indefinite"/>
     </rect>
 
