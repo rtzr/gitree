@@ -10,6 +10,8 @@ people running the binary, not contributors.
 
 ## [Unreleased]
 
+## [0.2.0] — 2026-05-19
+
 ### Added
 - Platform icons for ~22 ecosystems, auto-detected from a single `read_dir()`
   on the repo root (Rust, Go, Python, Next.js, Nuxt, Astro, Svelte, Deno,
@@ -47,5 +49,6 @@ Initial release.
 - Cross-platform release pipeline (Linux x86_64/aarch64,
   macOS x86_64/aarch64, Windows x86_64) on tagged `v*` pushes.
 
-[Unreleased]: https://github.com/rtzr/gitree/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/rtzr/gitree/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/rtzr/gitree/releases/tag/v0.2.0
 [0.1.0]: https://github.com/rtzr/gitree/releases/tag/v0.1.0
